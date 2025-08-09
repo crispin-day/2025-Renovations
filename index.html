@@ -6,14 +6,13 @@
 <title>2025 Renovations — Project Calendar</title>
 <style>
   :root { --brand:#4285f4; --grid:#e5e7eb; --muted:#6b7280; --chip:#e1f5fe; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#111; }
+  * { box-sizing: border-box; } body { margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#111; }
   header { display:flex; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--grid); position:sticky; top:0; background:#fff; z-index:2; }
   .title { font-weight:600; font-size:18px; margin-right:auto; }
   .controls button, .controls select { padding:8px 10px; border:1px solid var(--grid); background:#fff; border-radius:8px; cursor:pointer; font:inherit; }
   .controls button.primary { background:var(--brand); border-color:var(--brand); color:#fff; }
-  .calendar { max-width:1200px; margin: 12px auto 40px; padding: 0 12px; }
-  .month-bar { display:flex; align-items:center; gap:10px; margin: 14px 0; }
+  .calendar { max-width:1200px; margin:12px auto 40px; padding:0 12px; }
+  .month-bar { display:flex; align-items:center; gap:10px; margin:14px 0; }
   .month-label { font-size:20px; font-weight:700; }
   .grid { width:100%; border-collapse:collapse; table-layout:fixed; }
   .grid th { text-align:left; padding:8px; color:var(--muted); font-weight:600; border-bottom:1px solid var(--grid); }
@@ -21,10 +20,10 @@
   .daynum { font-weight:700; font-size:12px; color:#111; }
   .outside { background:#fafafa; color:#9ca3af; }
   .event { background:var(--chip); padding:4px 6px; margin-top:6px; border-radius:6px; font-size:12px; line-height:1.3; cursor:pointer; }
-  .filters { display:flex; gap:8px; align-items:center; margin: 8px 0 0; }
+  .filters { display:flex; gap:8px; align-items:center; margin:8px 0 0; }
   .legend { display:flex; gap:8px; align-items:center; margin-left:auto; color:var(--muted); font-size:12px; }
   #eventModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); align-items:center; justify-content:center; z-index:5; }
-  .sheet { width:min(520px, 92vw); background:#fff; border-radius:12px; padding:18px; box-shadow:0 12px 40px rgba(0,0,0,.2); }
+  .sheet { width:min(520px,92vw); background:#fff; border-radius:12px; padding:18px; box-shadow:0 12px 40px rgba(0,0,0,.2); }
   .sheet h3 { margin:0 0 12px; }
   .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
@@ -35,8 +34,18 @@
   .hidden { display:none !important; }
   @media (max-width:700px){ .row { grid-template-columns:1fr; } .grid td { height:100px; } header { flex-wrap:wrap; } }
 </style>
+
+<!-- Supabase client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // Your Supabase values
+  const SUPABASE_URL = "https://gvxbqtmbjchvtnrgruft.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2eGJxdG1iamNodH...13F4";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
 </head>
 <body>
+
 <header>
   <div class="title">Project Calendar</div>
   <div class="controls">
@@ -54,11 +63,7 @@
   <div class="month-bar">
     <div class="month-label" id="monthLabel"></div>
     <div class="filters">
-      <select id="houseFilter">
-        <option value="">All houses</option>
-        <option>House 1</option>
-        <option>House 2</option>
-      </select>
+      <select id="houseFilter"><option value="">All houses</option></select>
       <input id="contractorFilter" placeholder="Filter by contractor…" />
     </div>
     <div class="legend">Click a day to add; click an event to edit</div>
@@ -66,6 +71,7 @@
   <table class="grid" id="calendarGrid"></table>
 </div>
 
+<!-- Modal -->
 <div id="eventModal">
   <div class="sheet">
     <h3 id="modalTitle">Add/Edit Event</h3>
@@ -73,11 +79,13 @@
     <input type="hidden" id="editingIndex">
     <div class="row">
       <div><label>Title</label><input id="eventTitle" required placeholder="e.g., Drywall install"/></div>
-      <div><label>House</label><select id="eventHouse"><option>House 1</option><option>House 2</option></select></div>
+      <div><label>House</label><select id="eventHouse"></select></div>
     </div>
     <div class="row">
       <div><label>Contractor / Company</label><input id="eventContractor" placeholder="e.g., ABC Reno Co."/></div>
-      <div><label>All-day</label><select id="eventAllDay"><option value="1" selected>Yes</option><option value="0">No (set times)</option></select></div>
+      <div><label>All-day</label>
+        <select id="eventAllDay"><option value="1" selected>Yes</option><option value="0">No (set times)</option></select>
+      </div>
     </div>
     <div class="row" id="timeRow" class="hidden">
       <div><label>Start (HH:MM)</label><input id="eventStart" placeholder="09:00" /></div>
@@ -95,6 +103,9 @@
 
 <script>
 (function(){
+  // ---- Configurable house list (edit these names anytime) ----
+  const HOUSES = ["House 1","House 2"];
+
   const monthLabel = document.getElementById('monthLabel');
   const grid = document.getElementById('calendarGrid');
   const prevBtn = document.getElementById('prevBtn');
@@ -121,16 +132,26 @@
   const cancelBtn = document.getElementById('cancelBtn');
   const saveBtn = document.getElementById('saveBtn');
 
-  const LS_KEY = 'projectEvents_v2';
-  let events = loadEvents();
-
+  // Calendar state
   let view = new Date(); view.setDate(1);
 
+  // Data cache: { 'YYYY-MM-DD': [rows] }
+  let events = {};
+
+  // Build month/year pickers
   const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   monthNames.forEach((m,i)=>{ const opt=document.createElement('option'); opt.value=i; opt.textContent=m; monthSelect.appendChild(opt); });
   const currentYear = new Date().getFullYear();
   for (let y=currentYear-5; y<=currentYear+6; y++){ const opt=document.createElement('option'); opt.value=y; opt.textContent=y; yearSelect.appendChild(opt); }
 
+  // Build house selects from HOUSES
+  function buildHouseOptions(){
+    houseFilter.innerHTML = `<option value="">All houses</option>` + HOUSES.map(h=>`<option>${h}</option>`).join('');
+    eventHouse.innerHTML = HOUSES.map(h=>`<option>${h}</option>`).join('');
+  }
+  buildHouseOptions();
+
+  // Listeners
   prevBtn.onclick = ()=>{ view.setMonth(view.getMonth()-1); render(); };
   nextBtn.onclick = ()=>{ view.setMonth(view.getMonth()+1); render(); };
   todayBtn.onclick = ()=>{ view = new Date(); view.setDate(1); render(); };
@@ -143,15 +164,27 @@
   saveBtn.onclick = saveEvent;
   deleteBtn.onclick = deleteEvent;
 
-  function loadEvents(){ try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } }
-  function persist(){ localStorage.setItem(LS_KEY, JSON.stringify(events)); }
+  // ---- Supabase helpers ----
   function isoDate(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
   function startOfWeek(d){ const nd=new Date(d); const diff=(nd.getDay()+7-0)%7; nd.setDate(nd.getDate()-diff); nd.setHours(0,0,0,0); return nd; }
 
-  function render(){
+  async function fetchMonth(y,m){
+    const start = new Date(y,m,1);
+    const end   = new Date(y,m+1,0);
+    const s = start.toISOString().slice(0,10);
+    const e = end.toISOString().slice(0,10);
+    const { data, error } = await sb.from('events').select('*').gte('date',s).lte('date',e).order('date');
+    if (error){ console.error(error); return; }
+    events = {};
+    (data||[]).forEach(row => { (events[row.date] ||= []).push(row); });
+  }
+
+  async function render(){
     const y=view.getFullYear(), m=view.getMonth();
     monthLabel.textContent = `${monthNames[m]} ${y}`;
     monthSelect.value = m; yearSelect.value = y;
+
+    await fetchMonth(y,m);
 
     const weekdays=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
     grid.innerHTML=''; const head=document.createElement('tr');
@@ -173,7 +206,7 @@
 
         dayEvents.forEach((e,idx)=>{
           const div=document.createElement('div'); div.className='event';
-          const time = e.allDay ? '' : timeSpan(e.start, e.end);
+          const time = e.all_day ? '' : timeSpan(e.start, e.end);
           div.textContent = `${e.title} ${time ? ' • '+time : ''} (${e.house})`;
           div.onclick = (ev)=>{ ev.stopPropagation(); openModal(key, e, idx); };
           td.appendChild(div);
@@ -187,40 +220,60 @@
   }
 
   function timeSpan(s,e){ const fmt = (t)=> (t||'').slice(0,5); return [fmt(s), fmt(e)].filter(Boolean).join('–'); }
+
   function openModal(key, existing=null, index=null){
     eventISODate.value = key; editingIndex.value = index!=null ? String(index) : '';
     modalTitle.textContent = existing ? 'Edit Event' : 'Add Event';
-    eventTitle.value = existing?.title || ''; eventHouse.value = existing?.house || 'House 1';
-    eventContractor.value = existing?.contractor || ''; const isAllDay = existing ? !!existing.allDay : true;
-    eventAllDay.value = isAllDay ? '1' : '0'; timeRow.classList.toggle('hidden', isAllDay);
-    eventStart.value = existing?.start || ''; eventEnd.value = existing?.end || ''; eventDetails.value = existing?.details || '';
-    deleteBtn.classList.toggle('hidden', existing==null); modal.style.display='flex';
+    eventTitle.value = existing?.title || '';
+    eventHouse.value = existing?.house || HOUSES[0];
+    eventContractor.value = existing?.contractor || '';
+    const isAllDay = existing ? !!existing.all_day : true;
+    eventAllDay.value = isAllDay ? '1' : '0';
+    timeRow.classList.toggle('hidden', isAllDay);
+    eventStart.value = existing?.start || '';
+    eventEnd.value = existing?.end || '';
+    eventDetails.value = existing?.details || '';
+    deleteBtn.classList.toggle('hidden', existing==null);
+    modal.style.display='flex';
   }
   function closeModal(){ modal.style.display='none'; }
-  function saveEvent(){
-    const key = eventISODate.value; const idxStr = editingIndex.value;
+
+  async function saveEvent(){
+    const key = eventISODate.value;
+    const idxStr = editingIndex.value;
     const payload = {
-      title: (eventTitle.value||'').trim(), house: eventHouse.value,
-      contractor: (eventContractor.value||'').trim(), allDay: eventAllDay.value==='1',
+      date: key,
+      title: (eventTitle.value||'').trim(),
+      house: eventHouse.value,
+      contractor: (eventContractor.value||'').trim(),
+      all_day: eventAllDay.value==='1',
       start: eventAllDay.value==='1' ? '' : (eventStart.value||'').trim(),
       end:   eventAllDay.value==='1' ? '' : (eventEnd.value||'').trim(),
       details: (eventDetails.value||'').trim()
     };
     if (!payload.title){ alert('Title is required'); return; }
-    if (!events[key]) events[key]=[];
-    if (idxStr!=='') events[key][+idxStr]=payload; else events[key].push(payload);
-    persist(); closeModal(); render();
+    const existing = (idxStr!=='' && events[key]) ? events[key][+idxStr] : null;
+    if (existing?.id) payload.id = existing.id; // upsert -> update
+    const { error } = await sb.from('events').upsert(payload).select().single();
+    if (error){ alert('Save failed'); console.error(error); return; }
+    closeModal(); await render();
   }
-  function deleteEvent(){
+
+  async function deleteEvent(){
     const key = eventISODate.value; const idxStr = editingIndex.value;
     if (idxStr===''){ closeModal(); return; }
     if (!confirm('Delete this event?')) return;
-    events[key].splice(+idxStr,1); if (events[key].length===0) delete events[key];
-    persist(); closeModal(); render();
+    const row = events[key][+idxStr];
+    if (!row?.id){ closeModal(); return; }
+    const { error } = await sb.from('events').delete().eq('id', row.id);
+    if (error){ alert('Delete failed'); console.error(error); return; }
+    closeModal(); await render();
   }
+
   function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(null,a),ms); }; }
   modal.addEventListener('click', (e)=>{ if (e.target===modal) closeModal(); });
   document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeModal(); });
+
   render();
 })();
 </script>
